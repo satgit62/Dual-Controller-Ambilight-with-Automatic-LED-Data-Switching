@@ -1,250 +1,139 @@
-# Dual-Controller-Ambilight-with-Automatic-LED-Data-Switching
+# Dual-Controller Ambilight with Automatic LED DATA Switching
 
-A dual-controller Ambilight setup that allows an **SK6812 RGBW LED strip** to be shared between an **Adafruit Feather RP2040 SCORPIO running HyperSerialPico** and an **ESP32 running WLED**.
+A dual-controller Ambilight setup that allows one **SK6812 RGBW LED strip** to be shared automatically between:
 
-The LED strip does not need to be physically disconnected or rewired when switching between Ambilight and WLED.
+* **Adafruit Feather RP2040 SCORPIO** running HyperSerialPico
+* **ESP32 / WLED** for standalone LED control
 
-A hardware relay automatically switches the **LED DATA signal** depending on whether the TV is powered on.
+A relay automatically switches **only the LED DATA signal** between the two controllers. The LED power supply remains permanently connected.
 
----
+## How It Works
 
-## ✨ Features
+### TV OFF — WLED Mode
 
-* 🎬 Dynamic Ambilight using **LG TV + PicCap + HyperHDR**
-* 💡 **Adafruit Feather RP2040 SCORPIO** running HyperSerialPico
-* 🌈 **SK6812 RGBW** LED strip
-* 📱 **ESP32 + WLED** for standalone lighting
-* 🎵 Music-reactive WLED effects using the ESP32 microphone
-* 🔄 Automatic switching between Ambilight and WLED
-* 🔌 No need to physically reconnect the LED strip
-* ⚡ LED power remains permanently connected
-* 🔀 Only the low-voltage **DATA signal** is switched
-* 🛡️ Both controllers use level-shifted LED outputs
+When the LG TV is off, its USB port is also off. The SCORPIO is therefore unpowered and the relay is de-energized.
 
----
-
-## 📖 Overview
-
-The project combines two independently working LED controllers:
-
-### TV ON
-
-The LG TV powers the SCORPIO through USB.
-
-The SCORPIO starts HyperSerialPico and activates the relay using **GPIO9**.
-
-The relay connects the SCORPIO's LED DATA output to the LED strip.
-
-```text
-LG TV
-  │
-  │ USB
-  ▼
-SCORPIO
-  │
-  │ GPIO16 / OUT0
-  ▼
-Relay NO ── COM ── 330 Ω ──► SK6812 RGBW
-```
-
-The LEDs are therefore controlled by HyperHDR through HyperSerialPico.
-
-### TV OFF
-
-When the TV is switched off, its USB port no longer powers the SCORPIO.
-
-GPIO9 becomes inactive and the relay returns to its normally closed position.
-
-The WLED controller then controls the same LED strip.
+The relay connects **NC → COM**, allowing the ESP32/WLED controller to control the LED strip.
 
 ```text
 ESP32 / WLED
-  │
-  │ DATA
-  ▼
-Relay NC ── COM ── 330 Ω ──► SK6812 RGBW
+     │ DATA
+     ▼
+ Relay NC ── COM ── 330 Ω ──► SK6812 RGBW DIN
 ```
 
-This makes the transition between the two systems automatic.
+### TV ON — Ambilight Mode
+
+When the LG TV is switched on, it powers the SCORPIO through USB.
+
+HyperSerialPico starts and **GPIO9** activates the relay. The relay changes to **NO → COM**, connecting the SCORPIO LED DATA output to the LED strip.
+
+```text
+SCORPIO GPIO16 / OUT0
+     │ DATA
+     ▼
+ Relay NO ── COM ── 330 Ω ──► SK6812 RGBW DIN
+```
+
+The controller change happens automatically. No LED wiring needs to be changed manually.
 
 ---
 
-## 🖼️ Wiring Diagram
-
-The complete wiring diagram will be available here:
+## System Overview
 
 ```text
-docs/images/wiring-diagram.png
+                         LG TV
+                    ┌──────────────┐
+                    │ PicCap       │
+                    │ USB power    │
+                    └──────┬───────┘
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │ Feather RP2040      │
+                │ SCORPIO             │
+                │ HyperSerialPico     │
+                │                     │
+                │ GPIO16 / OUT0       │
+                │        → LED DATA   │
+                │                     │
+                │ GPIO9 / D9          │
+                │        → RELAY      │
+                └──────────┬──────────┘
+                           │
+                           │ DATA
+                           ▼
+                 ┌──────────────────┐
+ WLED DATA ─────►│ NC           COM ├──► 330 Ω ──► SK6812 RGBW
+                 │                  │
+ GPIO16 DATA ───►│ NO               │
+                 └──────────────────┘
+
+        External 5 V Power Supply
+             │
+             ├── +5 V ─────────────► SK6812 RGBW
+             ├── +5 V ─────────────► WLED*
+             └── GND ──────────────► Common GND
+
+* Where supported by the selected WLED controller.
 ```
 
-An SVG version is also provided for lossless scaling:
-
-```text
-docs/images/wiring-diagram.svg
-```
-
-> **Note:** The graphical wiring diagram is being finalized and will be added to the repository.
+> **IMPORTANT:** Never connect the LG TV USB +5 V directly to the external LED power supply +5 V. The grounds are shared, but the two +5 V supplies remain separate.
 
 ---
 
-## 🔧 Hardware
+## Hardware
 
-### Main Components
+| Component                        | Function                               |
+| -------------------------------- | -------------------------------------- |
+| Adafruit Feather RP2040 SCORPIO  | Ambilight / HyperSerialPico controller |
+| Adafruit Power Relay FeatherWing | Switches the LED DATA signal           |
+| ESP32 / WLED controller          | Standalone LED controller              |
+| SK6812 RGBW LED strip            | Shared LED strip                       |
+| External 5 V DC power supply     | LED and WLED power                     |
+| 330 Ω resistor                   | LED DATA series resistor               |
+| LG TV                            | Video source and SCORPIO USB power     |
 
-| Component                        | Function                             |
-| -------------------------------- | ------------------------------------ |
-| Adafruit Feather RP2040 SCORPIO  | HyperSerialPico Ambilight controller |
-| Adafruit Power Relay FeatherWing | LED DATA source switching            |
-| ESP32 / WLED controller          | Standalone LED controller            |
-| SK6812 RGBW LED strip            | Shared LED strip                     |
-| External 5 V power supply        | LED and WLED power                   |
-| 330 Ω resistor                   | LED DATA series resistor             |
-| LG TV                            | Video source / USB power             |
-| PicCap                           | Captures the TV video signal         |
-| HyperHDR                         | Generates Ambilight data             |
-
-The WLED controller can be a **Gledopto GL-C-016WL-D** or another compatible ESP32-based WLED controller with an appropriate level-shifted LED output.
+The WLED side can use a **Gledopto GL-C-016WL-D** or another compatible ESP32-based WLED controller with a suitable level-shifted LED output.
 
 ---
 
-# 🔌 Wiring
+## Pinout
 
-The relay switches **only the LED DATA line**.
+| SCORPIO Pin                   | Function                 | Connection                 |
+| ----------------------------- | ------------------------ | -------------------------- |
+| **GPIO16 / OUT0 / NEOPIXEL0** | HyperSerialPico LED DATA | Relay NO                   |
+| **GPIO9 / D9**                | Relay control            | Power Relay FeatherWing    |
+| **GND**                       | Common ground            | LED PSU / WLED / LED strip |
 
-The LED power supply remains permanently connected.
+### Important
 
-### DATA connections
+**GPIO16 remains the LED DATA output.**
 
-| From                  | To              |
-| --------------------- | --------------- |
-| WLED DATA OUT         | Relay **NC**    |
-| SCORPIO GPIO16 / OUT0 | Relay **NO**    |
-| Relay **COM**         | 330 Ω resistor  |
-| 330 Ω resistor        | SK6812 RGBW DIN |
-| SCORPIO GPIO9 / D9    | Relay control   |
+**GPIO9 is used exclusively for relay control.**
 
-### Power connections
-
-```text
-External 5 V PSU
-│
-├── +5 V ─────────► SK6812 RGBW +5 V
-│
-├── +5 V ─────────► WLED controller*
-│
-└── GND ──────────► Common GND
-                       │
-                       ├── SK6812 GND
-                       ├── WLED GND
-                       └── SCORPIO GND
-```
-
-* Only if supported by the selected WLED controller.
-
-### SCORPIO power
-
-The SCORPIO is powered independently from the LG TV USB port:
-
-```text
-LG TV USB
-   │
-   └──► SCORPIO USB
-```
-
-### ⚠️ Important
-
-**Do NOT connect the LG TV USB +5 V to the external LED PSU +5 V.**
-
-The TV USB power is used to power the SCORPIO only.
-
-The LED strip and WLED controller are powered from the dedicated 5 V LED power supply.
-
-The grounds must be common.
+Do **not** replace the SCORPIO LED DATA output with GPIO9.
 
 ---
 
-# 📌 Pinout
+## Relay Logic
 
-Only two SCORPIO GPIOs are relevant to the relay-based switching system.
+| TV State | SCORPIO | GPIO9    | Relay Path | Active Controller |
+| -------- | ------- | -------- | ---------- | ----------------- |
+| TV OFF   | Off     | Inactive | NC → COM   | WLED              |
+| TV ON    | On      | HIGH     | NO → COM   | HyperSerialPico   |
 
-| SCORPIO        | Function         | Connection                 |
-| -------------- | ---------------- | -------------------------- |
-| **GPIO16**     | NEOPIXEL0 / OUT0 | Relay NO                   |
-| **GPIO9 / D9** | Relay control    | Power Relay FeatherWing    |
-| **GND**        | Common ground    | LED PSU / WLED / LED strip |
+The relay switches the low-voltage **DATA signal only**.
 
-### GPIO16 — LED DATA
-
-GPIO16 is the first dedicated SCORPIO NeoPixel output:
-
-```text
-GPIO16
-  │
-  └── OUT0 / NEOPIXEL0
-```
-
-This remains the HyperSerialPico LED DATA output.
-
-### GPIO9 — Relay Control
-
-GPIO9 is used exclusively to control the Power Relay FeatherWing.
-
-It does **not** replace GPIO16 as the LED DATA output.
+It does **not** switch LED power.
 
 ---
 
-# 🔀 Relay Logic
+## HyperSerialPico Configuration
 
-The Power Relay FeatherWing is configured to use **D9 / GPIO9** as its control pin.
+This project uses the dedicated **Adafruit Feather RP2040 SCORPIO** build of **HyperSerialPico v11.1.0**.
 
-| TV state | GPIO9    | Relay    | LED DATA source |
-| -------- | -------- | -------- | --------------- |
-| TV OFF   | Inactive | NC → COM | WLED            |
-| TV ON    | HIGH     | NO → COM | HyperSerialPico |
-
-### TV OFF
-
-```text
-SCORPIO OFF
-     │
-     ▼
-GPIO9 inactive
-     │
-     ▼
-Relay de-energized
-     │
-     ▼
-NC ── COM
-     │
-     ▼
-WLED controls LEDs
-```
-
-### TV ON
-
-```text
-SCORPIO boots
-     │
-     ▼
-GPIO9 = HIGH
-     │
-     ▼
-Relay energized
-     │
-     ▼
-NO ── COM
-     │
-     ▼
-HyperSerialPico controls LEDs
-```
-
----
-
-# 💾 HyperSerialPico Modification
-
-The HyperSerialPico SCORPIO firmware needs one additional startup initialization for GPIO9.
-
-Add the following code during firmware initialization:
+GPIO9 is initialized once during firmware startup:
 
 ```cpp
 // Configure GPIO9 as an output and activate the relay
@@ -253,291 +142,190 @@ gpio_set_dir(9, GPIO_OUT);
 gpio_put(9, 1);
 ```
 
-The GPIO should be initialized once during startup rather than inside the LED update loop.
-
-The roles remain:
+The intended pin assignment is:
 
 ```text
 GPIO16 → LED DATA
 GPIO9  → Relay control
 ```
 
-> **Important:** Use the dedicated SCORPIO configuration/build of HyperSerialPico. Do not replace the SCORPIO LED output configuration with GPIO9.
+GPIO9 should be initialized during startup, before normal LED communication begins. It should **not** be used as the LED DATA output.
 
-The exact patch location can depend on the HyperSerialPico source version being used. The repository therefore documents the required code change rather than assuming a specific upstream source layout.
+See [`docs/firmware.md`](docs/firmware.md) for the firmware configuration and update notes.
 
 ---
 
-# 🧠 System Architecture
+## Wiring
+
+The complete wiring and power distribution are documented in [`docs/wiring.md`](docs/wiring.md).
+
+The essential DATA path is:
 
 ```text
-                         ┌──────────────────┐
-                         │      LG TV        │
-                         │                  │
-                         │ PicCap + USB     │
-                         └────────┬─────────┘
-                                  │
-                         USB power│
-                                  ▼
-                    ┌─────────────────────────┐
-                    │ Adafruit Feather        │
-                    │ RP2040 SCORPIO          │
-                    │                         │
-                    │ HyperSerialPico         │
-                    │                         │
-                    │ GPIO16 ─────────────┐   │
-                    │ GPIO9 ──────────┐  │   │
-                    └─────────────────│──│───┘
-                                      │  │
-                                      │  │
-                                      │  ▼
-                                      │ ┌──────────────┐
-                                      │ │ Power Relay  │
-                                      │ │ FeatherWing  │
-                                      │ │              │
-                         WLED DATA ───┼─►│ NC          │
-                                      │ │              │
-                         GPIO16 ──────┼─►│ NO          │
-                                        │              │
-                                        │ COM          │
-                                        └──────┬───────┘
-                                               │
-                                             330 Ω
-                                               │
-                                               ▼
-                                      ┌────────────────┐
-                                      │ SK6812 RGBW    │
-                                      │ LED Strip      │
-                                      └────────────────┘
-
-          ┌───────────────────┐
-          │ External 5 V PSU  │
-          │                   │
-          │ +5 V ─────────────┼────► LED strip
-          │                   │
-          │ GND ──────────────┼────► Common GND
-          └───────────────────┘
-                       │
-                       └────────────► WLED / SCORPIO GND
+WLED DATA OUT ─────► Relay NC
+SCORPIO GPIO16 ────► Relay NO
+Relay COM ── 330 Ω ─► SK6812 RGBW DIN
 ```
 
----
+### Ground
 
-# ⚡ Why Switch DATA Instead of LED Power?
-
-The LED strip is permanently connected to the external 5 V supply.
-
-Only the controller providing the DATA signal is switched.
-
-This avoids switching the relatively high current required by the LED strip.
-
-### Advantages
-
-* No high-current relay switching
-* LED power remains stable
-* Both controllers can remain permanently connected
-* Automatic controller selection
-* Simple hardware implementation
-* WLED remains available whenever the TV is off
-* HyperSerialPico automatically takes over when the TV is powered on
-
----
-
-# 🌈 WLED Mode
-
-When the TV is off, WLED becomes the active LED controller.
-
-This allows the same Ambilight installation to be used as a standalone lighting system.
-
-Possible applications include:
-
-* Static ambient lighting
-* WLED effects
-* Color presets
-* Music-reactive effects
-* ESP32 microphone-based audio visualization
-* Remote control from a phone
-
----
-
-# 🎬 Ambilight Mode
-
-When the TV is on:
+The following must share a common ground reference:
 
 ```text
-LG TV
-  │
-  ▼
-PicCap
-  │
-  ▼
-HyperHDR
-  │
-  ▼
-HyperSerialPico
-  │
-  ▼
-SCORPIO GPIO16
-  │
-  ▼
-Relay
-  │
-  ▼
-SK6812 RGBW
+LED PSU GND
+     │
+     ├── WLED GND
+     ├── SCORPIO GND
+     └── LED strip GND
 ```
 
-The relay automatically connects the SCORPIO DATA output to the LED strip.
+### Power
+
+The LED strip is powered continuously from the external 5 V supply.
+
+The SCORPIO is powered separately from the LG TV USB port.
+
+**Do not connect the two +5 V sources together.**
 
 ---
 
-# 🧪 Testing
+## Wiring Diagram
 
-Both controller setups should first be tested independently.
+The project wiring schematic is provided in:
 
-## 1. Test WLED
+* [`images/wiring-diagram.svg`](images/wiring-diagram.svg) — scalable vector version
+* [`images/wiring-diagram.png`](images/wiring-diagram.png) — PNG version
 
-Connect the LED strip directly to the WLED controller.
+The diagram shows the DATA paths, power distribution, common ground, relay states, and the separated +5 V supplies.
+
+---
+
+## Level Shifting
+
+No additional level shifter is required when both controllers provide suitable **level-shifted LED DATA outputs** for the SK6812 strip.
+
+If a different WLED controller is used, verify its LED DATA voltage compatibility before connecting it directly to the relay and LED strip.
+
+---
+
+## Testing
+
+Test each controller independently before installing the relay.
+
+### 1. Test WLED
 
 Verify:
 
-* LED colors
 * LED count
 * RGBW configuration
-* WLED effects
-* music-reactive mode, if used
+* Colors
+* Effects
+* LED DATA output
+* Any audio-reactive configuration
 
-## 2. Test HyperSerialPico
-
-Connect the LED strip directly to SCORPIO GPIO16 / OUT0.
+### 2. Test HyperSerialPico
 
 Verify:
 
-* HyperSerialPico communication
+* USB communication
 * HyperHDR output
-* correct LED colors
-* correct RGBW operation
+* LED colors
+* RGBW operation
+* SCORPIO GPIO16 DATA output
 
-## 3. Install the relay
+### 3. Test the Relay
 
 Connect:
 
 ```text
-WLED DATA OUT ─────► NC
-
-SCORPIO GPIO16 ────► NO
-
-COM ── 330 Ω ──────► SK6812 DIN
+WLED DATA OUT  → Relay NC
+SCORPIO GPIO16 → Relay NO
+Relay COM      → 330 Ω → LED DIN
+SCORPIO GPIO9  → Relay control
 ```
 
-Leave the LED power wiring unchanged.
+### 4. Test TV OFF
 
-## 4. Test with TV OFF
+The SCORPIO should be unpowered.
 
-Expected:
+The relay should be de-energized.
 
-```text
-SCORPIO = OFF
-Relay   = NC
-WLED    = active
-```
+**WLED should control the LED strip.**
 
-## 5. Test with TV ON
+### 5. Test TV ON
 
-Expected:
+The SCORPIO should boot from the TV USB supply.
 
-```text
-SCORPIO = ON
-GPIO9   = HIGH
-Relay   = NO
-HyperSerialPico = active
-```
+GPIO9 should activate the relay.
+
+The relay should switch to NO → COM.
+
+**HyperSerialPico should control the LED strip.**
+
+A brief switching glitch may occur while the mechanical relay changes contact state. This is normal for a mechanical DATA-switching relay.
 
 ---
 
-# ⚠️ Important Electrical Notes
+## Electrical Notes
 
-* The relay is used only for the **low-voltage LED DATA signal**.
-* Do not use this design to switch mains voltage.
-* Use a suitable 5 V power supply for the total LED current.
-* Ensure the LED PSU wiring is appropriately sized.
-* Keep the 330 Ω DATA resistor close to the LED DATA input.
-* All three systems must share a common ground:
-
-  * SCORPIO
-  * WLED
-  * LED power supply
-* Do not connect the LG TV USB +5 V to the LED PSU +5 V.
-* No additional level shifter is required when using compatible level-shifted outputs from the two controllers.
+* Use a suitable **5 V power supply** for the actual LED load.
+* Size the LED power wiring appropriately for the strip current.
+* Keep the **330 Ω resistor** close to the LED DATA input where practical.
+* Keep SCORPIO GND, WLED GND, LED PSU GND, and LED strip GND at a common reference.
+* Do not use this circuit to switch mains voltage.
+* Do not connect the LG TV USB +5 V to the external LED PSU +5 V.
+* The relay switches **DATA only**.
+* LED power remains permanently connected.
+* Verify the pinout and voltage compatibility of any alternative WLED controller before use.
 
 ---
 
-# 📦 Repository Structure
+## Repository Structure
 
 ```text
-dual-controller-ambilight/
-│
+Dual-Controller-Ambilight-with-Automatic-LED-Data-Switching/
 ├── README.md
 ├── LICENSE
-│
 ├── hardware/
 │   └── BOM.md
-│
 ├── docs/
 │   ├── wiring.md
-│   ├── pinout.md
-│   ├── firmware.md
-│   └── images/
-│       ├── wiring-diagram.png
-│       └── wiring-diagram.svg
-│
-└── firmware/
-    └── hyperserialpico-gpio9.patch
+│   └── firmware.md
+└── images/
+    ├── wiring-diagram.png
+    └── wiring-diagram.svg
 ```
 
 ---
 
-# 📋 Bill of Materials
+## Related Projects
 
-| Qty. | Component                          |
-| ---: | ---------------------------------- |
-|    1 | Adafruit Feather RP2040 SCORPIO    |
-|    1 | Adafruit Power Relay FeatherWing   |
-|    1 | ESP32 / compatible WLED controller |
-|    1 | SK6812 RGBW LED strip              |
-|    1 | Suitable 5 V LED power supply      |
-|    1 | 330 Ω resistor                     |
-|    1 | Set of suitable Feather headers    |
-|    — | Suitable wiring/connectors         |
+This project uses or builds upon the following open-source projects and hardware:
 
----
+* HyperSerialPico
+* HyperHDR
+* PicCap
+* WLED
+* Adafruit Feather RP2040 SCORPIO
+* Adafruit Power Relay FeatherWing
 
-# 🔗 Related Projects
-
-This project builds on several excellent open-source projects and hardware platforms:
-
-* **HyperSerialPico** — high-speed LED control for Raspberry Pi Pico / RP2040
-* **HyperHDR** — Ambilight processing
-* **PicCap** — webOS video capture
-* **WLED** — ESP32-based addressable LED controller
-* **Adafruit Feather RP2040 SCORPIO** — multi-output RP2040 LED controller
-* **Adafruit Power Relay FeatherWing** — relay switching
-
-Please refer to the respective upstream projects for their documentation, licenses, and original source code.
+Please refer to the respective upstream projects for their documentation, licenses, copyrights, and original source code.
 
 ---
 
-# 📜 License
+## License
 
-This repository contains original documentation, wiring information, and configuration created for this project.
+The original documentation, wiring diagrams, configuration information, and other original material in this repository are provided under the **MIT License**.
 
-Third-party software and hardware remain subject to their respective licenses and terms.
+This project uses and builds upon third-party open-source projects and hardware, including HyperSerialPico, HyperHDR, PicCap, WLED, and Adafruit hardware. Those projects remain subject to their respective licenses and copyrights.
+
+This repository does not relicense third-party software, firmware, trademarks, or hardware designs.
 
 See [`LICENSE`](LICENSE) for the license covering the original material in this repository.
 
 ---
 
-# 🤝 Contributing
+## Contributing
 
-Suggestions, corrections, improvements, additional controller compatibility, and tested configurations are welcome.
+Suggestions, corrections, improvements, additional WLED controller compatibility, and tested configurations are welcome.
 
-If you build this setup with another WLED-compatible controller or a different SK6812 RGBW configuration, feel free to document your results and share them with the project.
