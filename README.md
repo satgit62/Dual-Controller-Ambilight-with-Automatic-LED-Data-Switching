@@ -218,7 +218,7 @@ The SCORPIO is powered separately from the LG TV USB port.
 The project wiring schematic is provided in:
 
 * [`images/wiring-diagram.svg`](images/wiring-diagram.svg) — scalable vector version
-* [`images/wiring-diagram.png`](Dual-Controller-Ambilight-Schaltplan-Scorpio-DE.png) — PNG version
+* [`images/wiring-diagram.png`](images/wiring-diagram.png) — PNG version
 
 The diagram shows the DATA paths, power distribution, common ground, relay states, and the separated +5 V supplies.
 
