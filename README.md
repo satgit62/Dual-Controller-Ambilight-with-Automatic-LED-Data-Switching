@@ -9,7 +9,7 @@ A relay automatically switches **only the LED DATA signal** between the two cont
 
 ## Why Dual-Controller Operation?
 
-A typical Ambilight setup is designed to work only while the TV is running. In this project, the same LED strip is also intended to remain useful when the TV is switched off.
+A typical Ambilight configuration for an LG television running webOS and featuring the HyperHDR HyperSerial/adalight LED controller is designed to work only whilst the television is switched on. In this project, however, the aim is to enable the same LED strip to be used even when the television is switched off.
 
 The reason for using two controllers is that the two operating modes have different requirements:
 
